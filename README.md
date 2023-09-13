@@ -1,4 +1,4 @@
-## setup SSTP Automated bash script server
+## setup softether Automated bash script server
 
  - Download and install latest vpn server
  - config start server at boot
@@ -13,7 +13,7 @@
 
 
 ```
-bash <(curl -s -L https://raw.githubusercontent.com/opiran-club/sstp/main/opiran-sstp)
+bash <(curl -s -L https://raw.githubusercontent.com/opiran-club/softether/main/opiran-seth)
 ```
 
    
