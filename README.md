@@ -7,7 +7,7 @@
  - setting firewall rules
  - show status of server
 
-🔗 [Video Toturial](youtu.be/0CGRJQHjif8)
+🔗 👉🏼 [Video Toturial](youtu.be/0CGRJQHjif8)👈🏼
 
 ---------------------------------------------------------------------------------------------------------------------------------------
 
