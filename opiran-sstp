@@ -196,13 +196,10 @@ uninstall() {
 certificate() {
     clear
     echo ""
-    echo -ne "${GREEN}Enter your email address: ${NC}"
-    read email
-    echo ""
     echo -ne "${GREEN}Enter your domain: ${NC}"
     read domain
     echo ""
-    echo -ne "${YELLOW}Type your admin password ${NC}"
+    echo -ne "${YELLOW}Type your "ADMIN PASSWORD" ${NC}"
     read password
 
     # Check if the certificate already exists in the specified directory
