@@ -320,6 +320,14 @@ help() {
     echo ""
 }
 
+get_vpn_status() {
+    if systemctl is-active --quiet softether-vpnserver; then
+        echo -e "${MAGENTA}Status: ${GREEN}Running${NC}"
+    else
+        echo -e "${MAGENTA}Status: ${RED}Not Running${NC}"
+    fi
+}
+
 while true; do
     clear
 
@@ -336,6 +344,8 @@ while true; do
     echo -e "${BLUE}$tg_title ${NC}"
     echo -e "${BLUE}$yt_title  ${NC}"
     echo -e "${YELLOW}______________________________________________________${NC}"
+    echo ""
+    get_vpn_status
     echo ""
     echo -e "${CYAN} 1${NC}) ${RED}=> ${YELLOW}Install and Configure SSTP VPN Server${NC}"
     echo -e "${CYAN} 2${NC}) ${RED}=> ${YELLOW}Set and modify admin password for SSTP MANAGER${NC}"
