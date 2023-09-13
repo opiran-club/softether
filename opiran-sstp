@@ -320,6 +320,14 @@ help() {
     echo ""
 }
 
+vpn_logs() {
+    clear
+    echo -e "${CYAN}*** ${GREEN}VPN Server Logs ${CYAN}***${NC}"
+    echo ""
+    journalctl -u softether-vpnserver.service --no-pager
+    echo -e "${NC}"
+}
+
 get_vpn_status() {
     if systemctl is-active --quiet softether-vpnserver; then
         echo -e "${MAGENTA}Status: ${GREEN}Running${NC}"
@@ -354,7 +362,8 @@ while true; do
     echo -e "${CYAN} 5${NC}) ${RED}=> ${YELLOW}Uninstall VPN Server${NC}"
     echo ""
     echo -e "${CYAN} H${NC}) ${RED}>>>> ${YELLOW}Help ${RED}<<<<${NC}"
-    echo -e "${CYAN} S${NC}) ${RED}>>>> ${YELLOW}VPN status ${RED}<<<<${NC}"
+    echo -e "${CYAN} S${NC}) ${RED}>>>> ${YELLOW}status${RED}<<<<${NC}"
+    echo -e "${CYAN} L${NC}) ${RED}>>>> ${YELLOW}Logs ${RED}<<<<${NC}"
     echo -e "${CYAN} 0${NC}) ${RED}>>>> ${YELLOW}Exit ${RED}<<<<${NC}"
     echo ""
     echo -ne "${GREEN}Select an option ${RED}[1-4]: ${NC}"
@@ -383,7 +392,9 @@ while true; do
         [sS])
             status
             ;;
-
+        [lL])
+            vpn_logs
+            ;;
         0)
             echo "Exiting..."
             exit 0
