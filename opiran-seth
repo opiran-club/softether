@@ -64,7 +64,10 @@ install() {
     clear
     echo -e "${RED}At First we should make sure all packages are suitable for VPN server.${NC}"
     sleep 1
-            apt-get update && apt-get upgrade -y > /dev/null 2>&1
+            apt-get update > /dev/null 2>&1
+            display_fancy_progress 20
+
+            apt-get upgrade -y > /dev/null 2>&1
             display_fancy_progress 20
 
             apt-get install build-essential -y && apt-get install expect -y > /dev/null 2>&1
@@ -77,7 +80,7 @@ install() {
 
 config() {
     echo ""
-    echo -e "${YELLOW}Let's start configuring the SSTP VPN server.${NC}"
+    echo -e "${YELLOW}Let's start configuring the Softether VPN server.${NC}"
     press_enter
     # Enable IPv4 and IPv6 forwarding
     echo 'net.ipv4.ip_forward=1' >> /etc/sysctl.conf
@@ -138,7 +141,7 @@ password() {
   # Use an expect script to automate interaction with vpncmd
   echo ""
   echo ""
-echo -ne "${YELLOW}Type admin password ${NC}"
+echo -ne "${YELLOW}Type your desire admin password ${NC}"
 read password
 
 expect <<EOF
@@ -196,6 +199,9 @@ uninstall() {
 certificate() {
     clear
     echo ""
+    echo -ne "${GREEN}Enter your Email: ${NC}"
+    read email
+    echo ""
     echo -ne "${GREEN}Enter your domain: ${NC}"
     read domain
     echo ""
@@ -207,7 +213,7 @@ certificate() {
         echo "Certificate files already exist for $domain."
     else
         # Obtain a new certificate if it doesn't exist
-        certbot certonly --standalone --preferred-challenges http --agree-tos -d $domain
+        certbot certonly --standalone --preferred-challenges http --agree-tos -d $domain --email $email
     fi
 
     expect <<EOF
@@ -327,9 +333,9 @@ vpn_logs() {
 
 get_vpn_status() {
     if systemctl is-active --quiet softether-vpnserver; then
-        echo -e "${MAGENTA}Status: ${GREEN}Running${NC}"
+        echo -e "${MAGENTA}Softether Status: ${GREEN}Running${NC}"
     else
-        echo -e "${MAGENTA}Status: ${RED}Not Running${NC}"
+        echo -e "${MAGENTA}Softether Status: ${RED}Not Running${NC}"
     fi
 }
 
@@ -337,7 +343,7 @@ while true; do
     clear
 
     # Calculate the padding for adjusting the title position
-    title_text="SSTP VPN Server Installation and Configuration"
+    title_text="SOFTETHER VPN Server Installation and Configuration"
     tg_title="TG-Group @OPIranCluB"
     yt_title="youtube.com/@opiran-inistitute"
 
@@ -352,8 +358,8 @@ while true; do
     echo ""
     get_vpn_status
     echo ""
-    echo -e "${CYAN} 1${NC}) ${RED}=> ${YELLOW}Install and Configure SSTP VPN Server${NC}"
-    echo -e "${CYAN} 2${NC}) ${RED}=> ${YELLOW}Set and modify admin password for SSTP MANAGER${NC}"
+    echo -e "${CYAN} 1${NC}) ${RED}=> ${YELLOW}Install and Configure Softether VPN Server${NC}"
+    echo -e "${CYAN} 2${NC}) ${RED}=> ${YELLOW}Set and modify admin password for Softether MANAGER${NC}"
     echo -e "${CYAN} 3${NC}) ${RED}=> ${YELLOW}Get Certificate and Link to VPN Server${NC}"
     echo -e "${CYAN} 4${NC}) ${RED}=> ${YELLOW}Firewall Setup for VPN Server${NC}"
     echo -e "${CYAN} 5${NC}) ${RED}=> ${YELLOW}Uninstall VPN Server${NC}"
