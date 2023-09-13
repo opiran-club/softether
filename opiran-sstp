@@ -1,0 +1,388 @@
+#!/bin/bash
+
+CYAN="\e[36m"
+GREEN="\e[32m"
+YELLOW="\e[33m"
+RED="\e[31m"
+BLUE="\e[34m"
+MAGENTA="\e[35m"
+NC="\e[0m"
+
+# Function to continue after pressing Enter
+press_enter() {
+    echo -e "\n ${RED}Press Enter to continue... ${NC}"
+    read
+}
+
+# Function to display a fancier progress bar
+display_fancy_progress() {
+    local duration=$1
+    local sleep_interval=0.1
+    local progress=0
+    local bar_length=40
+
+    while [ $progress -lt $duration ]; do
+        echo -ne "\r[${YELLOW}"
+        for ((i = 0; i < bar_length; i++)); do
+            if [ $i -lt $((progress * bar_length / duration)) ]; then
+                echo -ne "▓"
+            else
+                echo -ne "░"
+            fi
+        done
+        echo -ne "${RED}] ${progress}%"
+        progress=$((progress + 1))
+        sleep $sleep_interval
+    done
+    echo -ne "\r[${YELLOW}"
+    for ((i = 0; i < bar_length; i++)); do
+        echo -ne "#"
+    done
+    echo -ne "${RED}] ${progress}%"
+    echo
+}
+
+logo() {
+    echo -e "\n${BLUE}
+      ::::::::  ::::::::: ::::::::::: :::::::::      :::     ::::    ::: 
+    :+:    :+: :+:    :+:    :+:     :+:    :+:   :+: :+:   :+:+:   :+:  
+   +:+    +:+ +:+    +:+    +:+     +:+    +:+  +:+   +:+  :+:+:+  +:+   
+  +#+    +:+ +#++:++#+     +#+     +#++:++#:  +#++:++#++: +#+ +:+ +#+    
+ +#+    +#+ +#+           +#+     +#+    +#+ +#+     +#+ +#+  +#+#+#     
+#+#    #+# #+#           #+#     #+#    #+# #+#     #+# #+#   #+#+#      
+########  ###       ########### ###    ### ###     ### ###    ####       
+    ${NC}\n"
+}
+
+# Check if script is being run as root
+if [ "$EUID" -ne 0 ]; then
+    echo -e "\n ${RED}This script must be run as root.${NC}"
+    exit 1
+fi
+
+install() {
+    clear
+    echo -e "${RED}At First we should make sure all packages are suitable for VPN server.${NC}"
+    sleep 1
+            apt-get update && apt-get upgrade -y > /dev/null 2>&1
+            display_fancy_progress 20
+
+            apt-get install build-essential -y && apt-get install expect -y > /dev/null 2>&1
+            display_fancy_progress 50
+
+            apt-get install wget certbot make ufw gcc binutils gzip libreadline-dev libssl-dev libncurses5-dev libncursesw5-dev libpthread-stubs0-dev -y > /dev/null 2>&1
+            display_fancy_progress 50
+
+}
+
+config() {
+    echo ""
+    echo -e "${YELLOW}Let's start configuring the SSTP VPN server.${NC}"
+    press_enter
+    # Enable IPv4 and IPv6 forwarding
+    echo 'net.ipv4.ip_forward=1' >> /etc/sysctl.conf
+    echo 'net.ipv6.conf.all.forwarding=1' >> /etc/sysctl.conf
+    sysctl -p
+
+    # Download SoftEther installer file and overwrite if it already exists
+    wget -N https://github.com/SoftEtherVPN/SoftEtherVPN_Stable/releases/download/v4.38-9760-rtm/softether-vpnserver-v4.38-9760-rtm-2021.08.17-linux-x64-64bit.tar.gz > /dev/null 2>&1
+
+    # Extract the installer file quietly
+    tar xzf softether-vpnserver-v4.38-9760-rtm-2021.08.17-linux-x64-64bit.tar.gz
+    
+    cd vpnserver && make
+
+    cd ..
+
+    mv vpnserver /opt/softether
+    
+    sudo /opt/softether/vpnserver start
+
+    # Create a service file
+    echo "[Unit]
+Description=SoftEther VPN server
+After=network-online.target
+After=dbus.service
+
+[Service]
+Type=forking
+ExecStart=/opt/softether/vpnserver start
+ExecReload=/bin/kill -HUP $MAINPID
+
+[Install]
+WantedBy=multi-user.target" > /etc/systemd/system/softether-vpnserver.service
+
+    # Create the lock directory
+    chmod +x /etc/systemd/system/softether-vpnserver.service
+    systemctl start softether-vpnserver
+    systemctl enable softether-vpnserver
+
+echo ""
+echo -e "               ${YELLOW}AFTER REBOOT RUN THIS SCRIPT AGAIN AND PLEASE CHOOSE OPTION 2.${NC}"
+
+echo -ne "${GREEN}Reboot your VPS now? [Y/N]: ${NC}"
+read reboot
+case "$reboot" in
+        [Yy]) 
+        systemctl reboot
+        ;;
+        *) 
+        return 
+        ;;
+    esac
+exit
+}
+
+password() {
+  clear
+  # Use an expect script to automate interaction with vpncmd
+  echo ""
+  echo ""
+echo -ne "${YELLOW}Type admin password ${NC}"
+read password
+
+expect <<EOF
+    spawn sudo /opt/softether/vpncmd 127.0.0.1:5555
+
+    expect "Select 1, 2 or 3:"
+    send "1\r"
+
+    expect "VPN Server>"
+    send "ServerPasswordSet\r"
+
+    expect "Password:"
+    send "${password}\r"
+
+    expect "Confirm input:"
+    send "${password}\r"
+
+    expect "VPN Server>"
+    send "exit\r"
+
+    expect eof
+EOF
+
+   echo -e "${GREEN}Go to SSTP SERVER MANAGER use your IP and ${password}.${NC}"
+}
+
+uninstall() {
+    clear
+    echo ""
+    echo -ne "${GREEN}Are you sure you want to uninstall the VPN server? [Y/N]: ${NC}"
+    read uninstall_software
+
+    case "$uninstall_software" in
+        [yY])
+            systemctl stop softether-vpnserver
+            systemctl disable softether-vpnserver
+            rm -rf /opt/softether
+            rm /etc/systemd/system/softether-vpnserver.service
+
+            if [ $? -eq 0 ]; then
+                echo -e "${GREEN}VPN server successfully uninstalled.${NC}"
+            else
+                echo -e "${RED}Error: Failed to uninstall VPN server.${NC}"
+            fi
+            ;;
+        [Nn])
+            continue
+            ;;
+        *)
+            exit 0
+            ;;
+    esac
+}
+
+certificate() {
+    clear
+    echo ""
+    echo -ne "${GREEN}Enter your email address: ${NC}"
+    read email
+    echo ""
+    echo -ne "${GREEN}Enter your domain: ${NC}"
+    read domain
+    echo ""
+    echo -ne "${YELLOW}Type your admin password ${NC}"
+    read password
+
+    # Check if the certificate already exists in the specified directory
+    if [ -f "/etc/letsencrypt/live/$domain/fullchain.pem" ] && [ -f "/etc/letsencrypt/live/$domain/privkey.pem" ]; then
+        echo "Certificate files already exist for $domain."
+    else
+        # Obtain a new certificate if it doesn't exist
+        certbot certonly --standalone --preferred-challenges http --agree-tos -d $domain
+    fi
+
+    expect <<EOF
+    spawn sudo /opt/softether/vpncmd 127.0.0.1:5555
+
+    expect "Select 1, 2 or 3:"
+    send "1\r"
+
+    expect "password:"
+    send "${password}\r"
+
+    expect "VPN Server>"
+    send "ServerCertSet\r"
+
+    expect "Public key:"
+    send "/etc/letsencrypt/live/$domain/fullchain.pem\r"
+
+    expect "private key:"
+    send "/etc/letsencrypt/live/$domain/privkey.pem\r"
+
+    expect "VPN Server>"
+    send "exit\r"
+
+    expect eof
+EOF
+
+    echo -e "${YELLOW}Your admin Panel available at ${GREEN}https://$domain:5555 ${YELLOW} and admin password is ${GREEN}$password ${NC}"
+    # Restart the VPN server
+    systemctl restart softether-vpnserver
+
+    # Set up a cron job to renew the certificate automatically
+    echo "0 0 * * * certbot renew --quiet" | sudo crontab -
+}
+
+
+firewall() {
+    clear
+    echo -ne "${GREEN}Are you sure you want to set up a firewall and disable all ports except VPN server ports? [Y/N]: ${NC}"
+    read firewall
+
+    case "$firewall" in
+        [yY])
+            ufw allow 22
+            ufw allow 443
+            ufw allow 80
+            ufw allow 992
+            ufw allow 1194
+            ufw allow 5555
+            ufw allow 4500
+            ufw allow 1701
+            ufw allow 500
+            ufw allow 500,4500/udp
+            ;;
+        [Nn])
+            continue
+            ;;
+        *)
+            exit 0
+            ;;
+    esac
+}
+
+status() {
+    clear
+    echo -e "${CYAN}*** ${GREEN}SoftEther VPN Server ${YELLOW}Service${CYAN} ***${NC}"
+
+    # Check the status of the SoftEther VPN Server service
+    if systemctl is-active --quiet softether-vpnserver; then
+        echo -e "${GREEN}Status: Running${NC}"
+    else
+        echo -e "${RED}Status: Not Running${NC}"
+    fi
+
+    echo ""
+    systemctl status softether-vpnserver
+}
+
+help() {
+    clear
+    echo ""
+    echo -e "${CYAN}*** ${GREEN}How to start the ${YELLOW}SoftEther VPN Server ${GREEN}Service${CYAN} ***${NC}"
+    echo ""
+    echo "Please execute '${YELLOW}./vpnserver start${NC}' to run the ${GREEN}SoftEther VPN Server Background Service${NC}."
+    echo "And please execute '${YELLOW}./vpncmd${NC}' to run the ${GREEN}SoftEther VPN Command-Line Utility${NC} to configure SoftEther VPN Server."
+    echo ""
+    echo "Of course, you can use the ${GREEN}VPN Server Manager GUI Application${NC} for Windows / Mac OS X on the other Windows / Mac OS X computers in order to configure the ${GREEN}SoftEther VPN Server remotely${NC}."
+    echo ""
+    echo "${CYAN}*** For Windows users ***${NC}"
+    echo "You can download the ${GREEN}SoftEther VPN Server Manager for Windows${NC} from the ${YELLOW}http://www.softether-download.com/${NC} web site."
+    echo "This manager application helps you to completely and easily manage the ${GREEN}VPN server services${NC} running in remote hosts."
+    echo ""
+    echo "${CYAN}*** For Mac OS X users ***${NC}"
+    echo "In April 2016 we released the ${GREEN}SoftEther VPN Server Manager for Mac OS X${NC}."
+    echo "You can download it from the ${YELLOW}http://www.softether-download.com/${NC} web site."
+    echo "${GREEN}VPN Server Manager for Mac OS X${NC} works perfectly as same as the traditional Windows versions. It helps you to completely and easily manage the ${GREEN}VPN server services${NC} running in remote hosts."
+    echo ""
+    echo "${CYAN}*** PacketiX VPN Server HTML5 Web Administration Console (NEW) ***${NC}"
+    echo "This ${GREEN}VPN Server / Bridge${NC} has the built-in ${GREEN}HTML5 Web Administration Console${NC}."
+    echo ""
+    echo "After you start the server daemon, you can open the ${GREEN}HTML5 Web Administration Console${NC} is available at"
+    echo ""
+    echo "${YELLOW}https://127.0.0.1:5555/${NC}"
+    echo "or"
+    echo "${YELLOW}https://ip_address_of_the_vpn_server:5555/${NC}"
+    echo ""
+    echo "This ${GREEN}HTML5 page${NC} is obviously under construction, and your ${GREEN}HTML5 development contribution${NC} is very appreciated."
+    echo ""
+}
+
+while true; do
+    clear
+
+    # Calculate the padding for adjusting the title position
+    title_text="SSTP VPN Server Installation and Configuration"
+    tg_title="TG-Group @OPIranCluB"
+    yt_title="youtube.com/@opiran-inistitute"
+
+    clear
+    echo -e "                 ${MAGENTA}${title_text}${NC}"
+    echo -e "${YELLOW}______________________________________________________${NC}"
+    logo
+    echo -e ""
+    echo -e "${BLUE}$tg_title ${NC}"
+    echo -e "${BLUE}$yt_title  ${NC}"
+    echo -e "${YELLOW}______________________________________________________${NC}"
+    echo ""
+    echo -e "${CYAN} 1${NC}) ${RED}=> ${YELLOW}Install and Configure SSTP VPN Server${NC}"
+    echo -e "${CYAN} 2${NC}) ${RED}=> ${YELLOW}Set and modify admin password for SSTP MANAGER${NC}"
+    echo -e "${CYAN} 3${NC}) ${RED}=> ${YELLOW}Get Certificate and Link to VPN Server${NC}"
+    echo -e "${CYAN} 4${NC}) ${RED}=> ${YELLOW}Firewall Setup for VPN Server${NC}"
+    echo -e "${CYAN} 5${NC}) ${RED}=> ${YELLOW}Uninstall VPN Server${NC}"
+    echo ""
+    echo -e "${CYAN} H${NC}) ${RED}>>>> ${YELLOW}Help ${RED}<<<<${NC}"
+    echo -e "${CYAN} S${NC}) ${RED}>>>> ${YELLOW}VPN status ${RED}<<<<${NC}"
+    echo -e "${CYAN} 0${NC}) ${RED}>>>> ${YELLOW}Exit ${RED}<<<<${NC}"
+    echo ""
+    echo -ne "${GREEN}Select an option ${RED}[1-4]: ${NC}"
+    read choice
+
+    case $choice in
+        1)
+            install
+            config
+            ;;
+        2)
+            password
+            ;;
+        3)
+            certificate
+            ;;
+        4)
+            firewall
+            ;;
+        5)
+            uninstall
+            ;;
+        [hH])
+            help
+            ;;
+        [sS])
+            status
+            ;;
+
+        0)
+            echo "Exiting..."
+            exit 0
+            ;;
+        *)
+            echo "Invalid choice. Please enter a valid option."
+            ;;
+    esac
+
+    echo -e "\n ${RED}Press Enter to continue... ${NC}"
+    read
+done
