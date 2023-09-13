@@ -19,7 +19,7 @@ bash <(curl -s -L https://raw.githubusercontent.com/opiran-club/sstp/main/opiran
    
 ## Image Of Script
 
-![image]()
+![image](https://github.com/opiran-club/sstp/assets/130220895/c6e36f3d-3428-424d-bfd6-60bef1112e18)
 
 ![image]()
 
