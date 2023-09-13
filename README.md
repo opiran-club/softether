@@ -1,4 +1,4 @@
-## setup softether Automated bash script server
+## Deploy softether automated bash script server and server manager configuration
 
  - Download and install latest vpn server
  - config start server at boot
