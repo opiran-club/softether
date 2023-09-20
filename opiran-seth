@@ -199,9 +199,6 @@ uninstall() {
 certificate() {
     clear
     echo ""
-    echo -ne "${GREEN}Enter your Email: ${NC}"
-    read email
-    echo ""
     echo -ne "${GREEN}Enter your domain: ${NC}"
     read domain
     echo ""
@@ -213,7 +210,7 @@ certificate() {
         echo "Certificate files already exist for $domain."
     else
         # Obtain a new certificate if it doesn't exist
-        certbot certonly --standalone --preferred-challenges http --agree-tos -d $domain --email $email
+        certbot certonly --register-unsafely-without-email --standalone --preferred-challenges http --agree-tos -d $domain
     fi
 
     expect <<EOF
