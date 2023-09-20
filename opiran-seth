@@ -278,14 +278,16 @@ status() {
     echo -e "${CYAN}*** ${GREEN}SoftEther VPN Server ${YELLOW}Service${CYAN} ***${NC}"
 
     # Check the status of the SoftEther VPN Server service
-    if systemctl is-active --quiet softether-vpnserver; then
+    status_output=$(systemctl status softether-vpnserver 2>&1)
+
+    if [[ "$status_output" =~ "Active: active" ]]; then
         echo -e "${GREEN}Status: Running${NC}"
     else
         echo -e "${RED}Status: Not Running${NC}"
     fi
 
     echo ""
-    systemctl status softether-vpnserver
+    echo "$status_output"
 }
 
 help() {
@@ -328,15 +330,6 @@ vpn_logs() {
     echo -e "${NC}"
 }
 
-get_vpn_status() {
-    if systemctl is-active --quiet softether-vpnserver; then
-        echo -e "${MAGENTA}Softether Status: ${GREEN}Running${NC}"
-    else
-        echo -e "${MAGENTA}Softether Status: ${RED}Not Running${NC}"
-    fi
-    systemctl status softether-vpnserver
-}
-
 while true; do
     clear
 
@@ -354,7 +347,7 @@ while true; do
     echo -e "${BLUE}$yt_title  ${NC}"
     echo -e "${YELLOW}______________________________________________________${NC}"
     echo ""
-    get_vpn_status
+    status
     echo ""
     echo -e "${CYAN} 1${NC}) ${RED}=> ${YELLOW}Install and Configure Softether VPN Server${NC}"
     echo -e "${CYAN} 2${NC}) ${RED}=> ${YELLOW}Set and modify admin password for Softether MANAGER${NC}"
