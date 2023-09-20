@@ -334,6 +334,7 @@ get_vpn_status() {
     else
         echo -e "${MAGENTA}Softether Status: ${RED}Not Running${NC}"
     fi
+    systemctl status softether-vpnserver
 }
 
 while true; do
