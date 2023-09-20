@@ -330,6 +330,15 @@ vpn_logs() {
     echo -e "${NC}"
 }
 
+menu_status() {
+    if systemctl is-active --quiet softether-vpnserver; then
+        echo -e "${CYAN}Status: ${GREEN}Running${NC}"
+    else
+        echo -e "${CYAN}Status: ${RED}Not Running${NC}"
+    fi
+    echo ""
+}
+
 while true; do
     clear
 
@@ -347,7 +356,7 @@ while true; do
     echo -e "${BLUE}$yt_title  ${NC}"
     echo -e "${YELLOW}______________________________________________________${NC}"
     echo ""
-    status
+    menu_status
     echo ""
     echo -e "${CYAN} 1${NC}) ${RED}=> ${YELLOW}Install and Configure Softether VPN Server${NC}"
     echo -e "${CYAN} 2${NC}) ${RED}=> ${YELLOW}Set and modify admin password for Softether MANAGER${NC}"
