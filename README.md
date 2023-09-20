@@ -21,7 +21,8 @@ bash <(curl -s -L https://raw.githubusercontent.com/opiran-club/softether/main/o
    
 ## Image Of Script
 
-![image](https://github.com/opiran-club/sstp/assets/130220895/c6e36f3d-3428-424d-bfd6-60bef1112e18)
+![image](https://github.com/opiran-club/softether/assets/130220895/6c0a4593-7748-480c-87e8-233fecbf54e5)
+
 
 #
 #### 🎁 Donate OPIran 🎁
