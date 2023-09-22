@@ -344,7 +344,7 @@ menu_status() {
 prepration_ipv6() {
     clear
     echo -e "${YELLOW}Lets check the system before proceeding...${NC}"
-    apt-get update && apt-get upgrade -y > /dev/null 2>&1
+    apt-get update > /dev/null 2>&1
     display_fancy_progress 20
 
     if ! dpkg -l | grep -q iproute2; then
@@ -358,6 +358,9 @@ prepration_ipv6() {
             return
         fi
     fi
+        modprobe ipv6 > /dev/null 2>&1
+        echo 1 > /proc/sys/net/ipv4/ip_forward > /dev/null 2>&1
+        echo 1 > /proc/sys/net/ipv6/conf/all/forwarding > /dev/null 2>&1
 
     if [[ $(cat /proc/sys/net/ipv4/ip_forward) -eq 0 ]]; then
         echo -e "${RED}IPv4 forwarding is not enabled. Attempting to enable it...${NC}"
@@ -365,7 +368,9 @@ prepration_ipv6() {
         if [[ $? -eq 0 ]]; then
             echo -e "${GREEN}IPv4 forwarding has been enabled.${NC}"
         else
-            echo -e "${RED}Failed to enable IPv4 forwarding. Please enable it manually before configuring 6to4.${NC}"
+            echo -e "${RED}Failed to enable IPv4 forwarding. Please enable it manually before configuring 6to4, just type below command into your terminal${NC}"
+            echo ""
+            echo -e "${YELLOW}echo 1 > /proc/sys/net/ipv4/ip_forward${NC}"
             return
         fi
     fi
@@ -391,21 +396,18 @@ prepration_ipv6() {
     sleep 1
     echo ""
     echo -e "       ${MAGENTA}Setting up 6to4 IPv6 addresses...${NC}"
-    main_interface=$(ip route | awk '/default/ {print $5}')
-    ipv4="$(curl -4 ifconfig.me)"
 
     echo ""
     echo -ne "${YELLOW}Do you have your own 6to4 IPv6 (Convert IPV4 to IPV6)? [Y/N]${NC}   "
-    read -e -i "N" answer
-
-    case $answer in
+    read answer
+        case $answer in
         [Yy])
             echo -ne "${YELLOW}Please enter your 6to4 IP?${NC}   "
             read ipv6_address
             ;;
         [Nn])
-            echo -ne "${YELLOW}Enter the IPv4 address (or just enter if it's true)?${NC}   "
-            read -e -i "$ipv4" ipv4
+            echo -ne "${YELLOW}Enter the IPv4 address${NC}   "
+            read ipv4
             ipv6_address=$(printf "2002:%02x%02x:%02x%02x::1" `echo $ipv4 | tr "." " "`)
             echo -e "${YELLOW}IPv6to4 Address: ${GREEN}$ipv6_address ${YELLOW}was created but not configured yet for routing.${NC}"
             ;;
@@ -414,19 +416,23 @@ prepration_ipv6() {
             return
             ;;
     esac
+    echo ""
+    echo -e "${YELLOW} مشابه با اسم اینترفیس های موجود نباشد ${NC}"
+    echo -ne "${YELLOW}Enter your desire interface (e.g. tun6to4) ${NC}   "
+    read interface
 
     echo ""
     echo -ne "${MAGENTA}Do you want me to configure for routing? [Y/N]${NC}   "
-    read -e -i "Y" answer
+    read answer
 
     case $answer in
         [Yy])
             /sbin/modprobe sit
-            /sbin/ip tunnel add tun6to4 mode sit ttl 255 remote any local "$ipv4"
-            /sbin/ip -6 link set dev tun6to4 mtu 1480
-            /sbin/ip link set dev tun6to4 up
-            /sbin/ip -6 addr add "$ipv6_address/16" dev tun6to4
-            /sbin/ip -6 route add 2000::/3 via ::192.88.99.1 dev tun6to4 metric 1
+            /sbin/ip tunnel add $interface mode sit ttl 255 remote any local "$ipv4"
+            /sbin/ip -6 link set dev $interface mtu 1480
+            /sbin/ip link set dev $interface up
+            /sbin/ip -6 addr add "$ipv6_address/16" dev $interface
+            /sbin/ip -6 route add 2000::/3 via ::192.88.99.1 dev $interface metric 1
             sleep 1
             systemctl restart systemd-networkd
             sleep 1
