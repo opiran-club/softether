@@ -429,7 +429,7 @@ prepration_ipv6() {
         [Yy])
             /sbin/modprobe sit
             /sbin/ip tunnel add $interface mode sit ttl 255 remote any local "$ipv4"
-            /sbin/ip -6 link set dev $interface mtu 1480
+            /sbin/ip -6 link set dev $interface mtu 1280
             /sbin/ip link set dev $interface up
             /sbin/ip -6 addr add "$ipv6_address/16" dev $interface
             /sbin/ip -6 route add 2000::/3 via ::192.88.99.1 dev $interface metric 1
@@ -446,6 +446,25 @@ prepration_ipv6() {
             return
             ;;
     esac
+
+echo "[Unit]
+Description=6to4 IPV6
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c '/sbin/modprobe sit && /sbin/ip tunnel add $interface mode sit ttl 255 remote any local "$ipv4" && /sbin/ip -6 link set dev $interface mtu 1280 && /sbin/ip link set dev $interface up && /sbin/ip -6 addr add "$ipv6_address/16" dev $interface && /sbin/ip -6 route add 2000::/3 via ::192.88.99.1 dev $interface metric 1'
+
+[Install]
+WantedBy=multi-user.target" > /etc/systemd/system/6to4.service
+
+    # Create the lock directory
+    chmod +x /etc/systemd/system/6to4.service
+    systemctl start --now 6to4
+    systemctl enable --now 6to4
+
+    echo ""
+    echo -e "${GREEN}IPv6to4 Address: ${GREEN}$ipv6_address ${YELLOW}was created and configured successfully.${NC}"
 }
 
 uninstall_6to4_ipv6() {
@@ -536,6 +555,8 @@ status_6to4_ipv6() {
 
 add_extra_ipv6() {
     clear
+    config_file="/etc/ipv6_config.txt"
+    touch "$config_file"
     prepration_ipv6
     systemctl restart systemd-networkd
     sleep 1
@@ -592,6 +613,7 @@ add_extra_ipv6() {
         for ((i=last_number+1; i<=last_number+quantity; i++)); do
             local ipv6_address="$ipv6_prefix::$i/64"
             if ip -6 addr add "$ipv6_address" dev "$main_interface"; then
+            echo "$ipv6_address" >> "$config_file"
             echo ""
                 echo -e "${NC}IPv6 Address ${GREEN}$i${NC}: ${GREEN}$ipv6_address${NC} Interface (dev): ${GREEN}$main_interface${NC}"
             else
@@ -606,6 +628,28 @@ add_extra_ipv6() {
     else
         echo -e "${RED}Invalid selection. No IPv6 addresses created.${NC}"
     fi
+
+echo "[Unit]
+Description=IPv6 Configuration
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/true
+
+ExecStartPost=/bin/bash -c '/bin/sleep 5 && while read -r line; do /sbin/ip -6 addr add "$line" dev "$main_interface"; done < /etc/ipv6_config.txt'
+
+[Install]
+WantedBy=multi-user.target" > /etc/systemd/system/extraipv6.service
+
+    # Create the lock directory
+    chmod +x /etc/systemd/system/extraipv6.service
+    systemctl daemon-reload
+    systemctl start --now extraipv6
+    systemctl enable --now extraipv6
+
+    echo ""
+    echo -e "${GREEN}IPv6 extra has been added successfully.${NC}"
 }
 
 delete_extra_ipv6() {
