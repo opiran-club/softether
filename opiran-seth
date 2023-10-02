@@ -453,7 +453,7 @@ After=network.target
 
 [Service]
 Type=oneshot
-ExecStart=/bin/bash -c '/sbin/modprobe sit && /sbin/ip tunnel add $interface mode sit ttl 255 remote any local "$ipv4" && /sbin/ip -6 link set dev $interface mtu 1280 && /sbin/ip link set dev $interface up && /sbin/ip -6 addr add "$ipv6_address/16" dev $interface && /sbin/ip -6 route add 2000::/3 via ::192.88.99.1 dev $interface metric 1'
+ExecStart=/bin/bash -c "/sbin/ip tunnel add $interface mode sit ttl 255 remote any local \"$ipv4\" && /sbin/ip -6 link set dev $interface mtu 1280 && /sbin/ip link set dev $interface up && /sbin/ip -6 addr add \"$ipv6_address/16\" dev $interface && /sbin/ip -6 route add 2000::/3 via ::192.88.99.1 dev $interface metric 1"
 
 [Install]
 WantedBy=multi-user.target" > /etc/systemd/system/6to4.service
@@ -464,7 +464,7 @@ WantedBy=multi-user.target" > /etc/systemd/system/6to4.service
     systemctl enable --now 6to4
 
     echo ""
-    echo -e "${GREEN}IPv6to4 Address: ${GREEN}$ipv6_address ${YELLOW}was created and configured successfully.${NC}"
+    echo -e "${GREEN} To run the service, Please reboot VPS to take action.${NC}"
 }
 
 uninstall_6to4_ipv6() {
@@ -650,6 +650,7 @@ WantedBy=multi-user.target" > /etc/systemd/system/extraipv6.service
 
     echo ""
     echo -e "${GREEN}IPv6 extra has been added successfully.${NC}"
+    echo -e "${GREEN}To run the service, Please reboot VPS to take action.${NC}"
 }
 
 delete_extra_ipv6() {
